@@ -1,0 +1,93 @@
+import tweepy
+import schedule
+import time
+from instabot import Bot
+
+
+def authenticate_to_twitter(api_key, api_secret_key, access_token, access_token_secret):
+    """Authenticate to Twitter using Tweepy and return the API object."""
+    auth = tweepy.OAuthHandler(api_key, api_secret_key)
+    auth.set_access_token(access_token, access_token_secret)
+    api = tweepy.API(auth)
+    return api
+
+
+def post_tweet(api, message, image_path=None):
+    """Post a tweet using the provided API object."""
+    try:
+        if image_path:
+            api.update_with_media(image_path, message)
+            print(f"Posted tweet with image: {message}")
+        else:
+            api.update_status(message)
+            print(f"Posted tweet: {message}")
+    except tweepy.TweepError as e:
+        print(f"Error posting tweet: {e.reason}")
+
+
+def schedule_tweet(api, message, time_interval, image_path=None):
+    """Schedule a tweet at a specific interval."""
+    schedule.every().day.at(time_interval).do(post_tweet, api, message, image_path)
+    while True:
+        schedule.run_pending()
+        time.sleep(1)
+
+
+def authenticate_to_instagram(username, password):
+    """Authenticate to Instagram and return the Bot object."""
+    bot = Bot()
+    bot.login(username=username, password=password)
+    return bot
+
+
+def post_to_instagram(bot, message, image_path):
+    """Post an image with a caption to Instagram."""
+    if not image_path:
+        print("Image is required for Instagram posts.")
+        return
+    bot.upload_photo(image_path, caption=message)
+
+
+if __name__ == "__main__":
+    platform = input("Which platform do you want to post to? (twitter/instagram): ").lower()
+
+    if platform == "twitter":
+        API_KEY = "YOUR_API_KEY"
+        API_SECRET_KEY = "YOUR_API_SECRET_KEY"
+        ACCESS_TOKEN = "YOUR_ACCESS_TOKEN"
+        ACCESS_TOKEN_SECRET = "YOUR_ACCESS_TOKEN_SECRET"
+
+        api = authenticate_to_twitter(API_KEY, API_SECRET_KEY, ACCESS_TOKEN, ACCESS_TOKEN_SECRET)
+
+        print("Welcome to the Automated Twitter Poster!")
+        message = input("Enter your tweet message: ")
+        choice = input("Do you want to attach an image? (yes/no): ").lower()
+        image_path = None
+        if choice == 'yes':
+            image_path = input("Enter the path to your image: ")
+
+        schedule_choice = input("Do you want to schedule the tweet? (yes/no): ").lower()
+        if schedule_choice == 'yes':
+            time_interval = input("Enter the time to post the tweet (HH:MM format): ")
+            schedule_tweet(api, message, time_interval, image_path)
+        else:
+            post_tweet(api, message, image_path)
+    elif platform == "instagram":
+        IG_USERNAME = "YOUR_INSTAGRAM_USERNAME"
+        IG_PASSWORD = "YOUR_INSTAGRAM_PASSWORD"
+
+        bot = authenticate_to_instagram(IG_USERNAME, IG_PASSWORD)
+
+        print("Welcome to the Automated Instagram Poster!")
+        message = input("Enter your post caption: ")
+        image_path = input("Enter the path to your image: ")
+
+        schedule_choice = input("Do you want to schedule the post? (yes/no): ").lower()
+        if schedule_choice == 'yes':
+            time_interval = input("Enter the time to post (HH:MM format): ")
+            schedule.every().day.at(time_interval).do(post_to_instagram, bot, message, image_path)
+            while True:
+                schedule.run_pending()
+                time.sleep(1)
+        else:
+            post_to_instagram(bot, message, image_path)
